@@ -23,8 +23,6 @@ export default function SokobanGame() {
     const rawLevel = LEVELS[index];
     const { grid, playerPos } = parseLevel(rawLevel);
     
-    // soundManager.startSokobanMusic(); // Optional auto-start
-
     setGameState({
       grid,
       playerPos,
@@ -44,7 +42,7 @@ export default function SokobanGame() {
 
   // Movement Logic
   const handleMove = useCallback((dir: Direction) => {
-    if (!gameState || gameState.levelCompleted) return;
+    if (!gameState || gameState.levelCompleted || showWinModal) return;
 
     soundManager.resumeContext();
 
@@ -56,7 +54,12 @@ export default function SokobanGame() {
       historyRef.current = newHistory;
       setHistoryLength(newHistory.length);
 
-      if (result.pushed) soundManager.playPush();
+      // Sound Feedback
+      if (result.pushed) {
+        soundManager.playPush();
+      } else {
+        soundManager.playStep();
+      }
 
       const isWin = checkWin(result.grid);
       if (isWin) {
@@ -71,7 +74,7 @@ export default function SokobanGame() {
         levelCompleted: isWin,
       });
     }
-  }, [gameState]);
+  }, [gameState, showWinModal]);
 
   // Undo
   const handleUndo = useCallback(() => {
@@ -86,6 +89,9 @@ export default function SokobanGame() {
   // Inputs
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Allow navigation keys if modal is open (handled by Modal) or generic navigation
+      if (showWinModal) return;
+
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) e.preventDefault();
       switch (e.key) {
         case 'ArrowUp': case 'w': case 'W': handleMove('UP'); break;
@@ -98,7 +104,7 @@ export default function SokobanGame() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleMove, handleUndo, loadLevel, currentLevelIndex]);
+  }, [handleMove, handleUndo, loadLevel, currentLevelIndex, showWinModal]);
 
   const handleNextLevel = () => {
     if (currentLevelIndex < LEVELS.length - 1) setCurrentLevelIndex(prev => prev + 1);
@@ -123,24 +129,26 @@ export default function SokobanGame() {
        <button
           onClick={handleUndo}
           disabled={historyLength === 0}
-          className="w-full py-3 px-4 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 border border-slate-700 rounded text-sm font-bold transition flex items-center justify-center gap-2"
+          className="w-full py-3 px-4 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 border border-slate-700 rounded text-sm font-bold transition flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-yellow-400"
         >
           <span>↩</span> Undo
         </button>
         <button
           onClick={() => loadLevel(currentLevelIndex)}
-          className="w-full py-3 px-4 bg-red-900/20 hover:bg-red-900/40 text-red-400 border border-red-900/30 rounded text-sm font-bold transition"
+          className="w-full py-3 px-4 bg-red-900/20 hover:bg-red-900/40 text-red-400 border border-red-900/30 rounded text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-red-400"
         >
           Reset
         </button>
         
         {/* Level Select Mini-Grid */}
-        <div className="mt-4 grid grid-cols-5 gap-1">
+        <div className="mt-4 grid grid-cols-5 gap-1" role="group" aria-label="Level Selector">
           {LEVELS.map((_, idx) => (
             <button
               key={idx}
               onClick={() => setCurrentLevelIndex(idx)}
-              className={`h-6 text-[10px] font-bold border rounded ${currentLevelIndex === idx ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-500'}`}
+              aria-label={`Select Level ${idx + 1}`}
+              aria-current={currentLevelIndex === idx}
+              className={`h-6 text-[10px] font-bold border rounded focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:z-10 ${currentLevelIndex === idx ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-500 hover:bg-slate-700'}`}
             >
               {idx + 1}
             </button>

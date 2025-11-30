@@ -34,7 +34,7 @@ export default function SnakeGame() {
     }
   }, []);
 
-  const startGame = () => {
+  const startGame = useCallback(() => {
     setSnake([{ x: 7, y: 7 }, { x: 6, y: 7 }, { x: 5, y: 7 }]);
     setFood(generateFood([{ x: 7, y: 7 }]));
     setDir('RIGHT');
@@ -42,7 +42,7 @@ export default function SnakeGame() {
     setScore(0);
     setStatus('PLAYING');
     soundManager.resumeContext();
-  };
+  }, [generateFood]);
 
   useEffect(() => {
     if (status !== 'PLAYING') return;
@@ -83,6 +83,8 @@ export default function SnakeGame() {
           setFood(generateFood(newSnake));
         } else {
           newSnake.pop(); // Remove tail
+          // Play Slither Sound on normal move (if not eating)
+          soundManager.playSlither();
         }
 
         // Update Ref direction for next input check
@@ -101,8 +103,14 @@ export default function SnakeGame() {
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'w', 'a', 's', 'd'].includes(e.key)) e.preventDefault();
       
       const key = e.key.toLowerCase();
-      const current = dirRef.current;
+      
+      // Restart
+      if (key === 'r') {
+        startGame();
+        return;
+      }
 
+      const current = dirRef.current;
       if ((key === 'arrowup' || key === 'w') && current !== 'DOWN') nextDirRef.current = 'UP';
       if ((key === 'arrowdown' || key === 's') && current !== 'UP') nextDirRef.current = 'DOWN';
       if ((key === 'arrowleft' || key === 'a') && current !== 'RIGHT') nextDirRef.current = 'LEFT';
@@ -111,7 +119,7 @@ export default function SnakeGame() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [startGame]);
 
   // Rendering Cells
   const renderCell = (x: number, y: number) => {
@@ -158,13 +166,14 @@ export default function SnakeGame() {
       ]}
       controls={[
         { keys: ['W','A','S','D'], action: 'Steer' },
+        { keys: ['R'], action: 'Restart' },
       ]}
     >
        <button
           onClick={startGame}
-          className="w-full py-4 px-6 bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl shadow-lg transition transform active:scale-95"
+          className="w-full py-4 px-6 bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl shadow-lg transition transform active:scale-95 focus:outline-none focus:ring-4 focus:ring-green-400/50"
         >
-          {status === 'IDLE' ? 'Start Game' : 'Restart'}
+          {status === 'IDLE' ? 'Start Game' : 'Restart (R)'}
         </button>
     </Sidebar>
   );
@@ -192,7 +201,13 @@ export default function SnakeGame() {
              <div className="text-center p-6 bg-slate-900 border-2 border-red-500 rounded-xl shadow-2xl">
                <h2 className="text-3xl font-bold text-red-500 mb-2">GAME OVER</h2>
                <p className="text-white mb-4">Final Score: {score}</p>
-               <button onClick={startGame} className="bg-red-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-red-500">Try Again</button>
+               <button 
+                  onClick={startGame} 
+                  className="bg-red-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-red-500 focus:outline-none focus:ring-4 focus:ring-red-500/50"
+                  autoFocus
+                >
+                  Try Again
+               </button>
              </div>
           </div>
         )}

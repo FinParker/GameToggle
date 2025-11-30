@@ -58,6 +58,11 @@ export default function RhythmGame() {
     if (gameLoopRef.current) cancelAnimationFrame(gameLoopRef.current);
   };
 
+  const togglePause = useCallback(() => {
+    if (isPlaying) stopGame();
+    else startGame();
+  }, [isPlaying]);
+
   // Game Loop
   const loop = useCallback((timestamp: number) => {
     if (!lastSpawnRef.current) lastSpawnRef.current = timestamp;
@@ -98,12 +103,17 @@ export default function RhythmGame() {
   // Input Handling
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Pause
+      if (e.key.toLowerCase() === 'p') {
+        togglePause();
+        return;
+      }
+
       if (!isPlaying) return;
       const key = e.key.toUpperCase();
       const laneIndex = LANES.indexOf(key);
       
       if (laneIndex !== -1) {
-        soundManager.playDrumHit();
         
         // Check for hit
         setNotes(prev => {
@@ -115,7 +125,8 @@ export default function RhythmGame() {
           );
 
           if (targetNote) {
-            // Use ref to calculate score without depending on 'combo' state in useEffect
+            // Hit!
+            soundManager.playDrumHit();
             const currentCombo = comboRef.current;
             setScore(s => s + 100 + (currentCombo * 10));
             setCombo(c => c + 1);
@@ -134,7 +145,7 @@ export default function RhythmGame() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isPlaying]); // Only rebind when play state changes, not on every combo update
+  }, [isPlaying, togglePause]);
 
   const sidebar = (
     <Sidebar
@@ -147,13 +158,14 @@ export default function RhythmGame() {
       ]}
       controls={[
         { keys: ['Q','W','E','R'], action: 'Hit Pads' },
+        { keys: ['P'], action: 'Pause/Resume' }
       ]}
     >
        <button
-          onClick={isPlaying ? stopGame : startGame}
-          className={`w-full py-4 px-6 font-bold rounded-xl shadow-lg transition transform active:scale-95 ${isPlaying ? 'bg-red-600 hover:bg-red-500' : 'bg-purple-600 hover:bg-purple-500'} text-white`}
+          onClick={togglePause}
+          className={`w-full py-4 px-6 font-bold rounded-xl shadow-lg transition transform active:scale-95 focus:outline-none focus:ring-4 focus:ring-purple-400/50 ${isPlaying ? 'bg-red-600 hover:bg-red-500' : 'bg-purple-600 hover:bg-purple-500'} text-white`}
         >
-          {isPlaying ? 'Stop Music' : 'Start Track'}
+          {isPlaying ? 'Pause Music (P)' : 'Start Track (P)'}
         </button>
     </Sidebar>
   );

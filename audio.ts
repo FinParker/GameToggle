@@ -68,12 +68,28 @@ export class SoundManager {
 
   // --- SFX Methods ---
 
+  public playStep() {
+    if (this.isMuted) return;
+    this.resumeContext();
+    const audio = new Audio('/step.mp3');
+    audio.volume = 0.4;
+    audio.play().catch(() => this.playSynthStep());
+  }
+
   public playPush() {
     if (this.isMuted) return;
     this.resumeContext();
     const audio = new Audio('/boxPush.mp3');
     audio.volume = 0.7;
     audio.play().catch(() => this.playSynthPush());
+  }
+
+  public playSlither() {
+    if (this.isMuted) return;
+    this.resumeContext();
+    const audio = new Audio('/slither.mp3');
+    audio.volume = 0.6;
+    audio.play().catch(() => this.playSynthSlither());
   }
 
   public playWin() {
@@ -108,12 +124,61 @@ export class SoundManager {
   }
 
   public playDrumMiss() {
+    // Requirements state no sound for missed/off-beat hits
     if (this.isMuted) return;
     this.resumeContext();
-    this.playSynthDrum(50); // Lower pitch for miss
+    // this.playSynthDrum(50); 
   }
 
   // --- Synthetic Fallbacks ---
+
+  private playSynthStep() {
+    if (!this.ctx) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    
+    // Short high click
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.05);
+    
+    gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.05);
+    
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.06);
+  }
+
+  private playSynthSlither() {
+    if (!this.ctx) return;
+    const bufferSize = this.ctx.sampleRate * 0.1; // 100ms
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    
+    // White noise
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buffer;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 400;
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 0.1);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.ctx.destination);
+    
+    noise.start();
+  }
 
   private playSynthPush() {
     if (!this.ctx) return;
@@ -124,13 +189,13 @@ export class SoundManager {
     
     osc.type = 'triangle';
     osc.frequency.setValueAtTime(100, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.1);
+    osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.15);
     
-    gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
     
     osc.start();
-    osc.stop(this.ctx.currentTime + 0.15);
+    osc.stop(this.ctx.currentTime + 0.2);
   }
 
   private playSynthWin() {
