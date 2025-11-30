@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Sidebar } from '../components/Sidebar';
 import { GameLayout } from '../components/Layout';
+import { Leaderboard } from '../components/Leaderboard';
 import { soundManager } from '../audio';
+import { saveSnakeScore, getSnakeScores, ScoreEntry } from '../storage';
 
 const GRID_SIZE = 15;
 const INITIAL_SPEED = 150;
@@ -16,6 +18,9 @@ export default function SnakeGame() {
   const [score, setScore] = useState(0);
   const [status, setStatus] = useState<'IDLE' | 'PLAYING' | 'GAME_OVER'>('IDLE');
   
+  // Leaderboard State
+  const [highScores, setHighScores] = useState<ScoreEntry[]>([]);
+
   // Refs for game loop to avoid closure staleness
   const dirRef = useRef(dir);
   const nextDirRef = useRef(dir); // Prevent 180 degree turns in one tick
@@ -24,6 +29,19 @@ export default function SnakeGame() {
     dirRef.current = dir;
     nextDirRef.current = dir;
   }, [dir]);
+
+  // Load scores on mount
+  useEffect(() => {
+    setHighScores(getSnakeScores());
+  }, []);
+
+  // Save score on Game Over
+  useEffect(() => {
+    if (status === 'GAME_OVER') {
+      const updatedScores = saveSnakeScore(score);
+      setHighScores(updatedScores);
+    }
+  }, [status, score]);
 
   const generateFood = useCallback((currentSnake: Point[]) => {
     while (true) {
@@ -197,13 +215,17 @@ export default function SnakeGame() {
         </div>
 
         {status === 'GAME_OVER' && (
-          <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-sm rounded-lg">
-             <div className="text-center p-6 bg-slate-900 border-2 border-red-500 rounded-xl shadow-2xl">
-               <h2 className="text-3xl font-bold text-red-500 mb-2">GAME OVER</h2>
-               <p className="text-white mb-4">Final Score: {score}</p>
+          <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-sm rounded-lg z-20">
+             <div className="flex flex-col gap-4 items-center p-6 bg-slate-900 border-2 border-red-500 rounded-xl shadow-2xl w-full max-w-sm mx-4 animate-in zoom-in duration-300">
+               <h2 className="text-3xl font-bold text-red-500">GAME OVER</h2>
+               <p className="text-white text-lg">Final Score: <span className="font-bold text-yellow-400">{score}</span></p>
+               
+               {/* Leaderboard */}
+               <Leaderboard title="High Scores" scores={highScores} recentScore={score} />
+
                <button 
                   onClick={startGame} 
-                  className="bg-red-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-red-500 focus:outline-none focus:ring-4 focus:ring-red-500/50"
+                  className="w-full bg-red-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-red-500 focus:outline-none focus:ring-4 focus:ring-red-500/50 transition-colors shadow-lg mt-2"
                   autoFocus
                 >
                   Try Again

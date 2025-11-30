@@ -7,6 +7,7 @@ import { Sidebar } from '../components/Sidebar';
 import { GameLayout } from '../components/Layout';
 import { WinModal } from '../components/WinModal';
 import { soundManager } from '../audio';
+import { saveSokobanBest, getSokobanBests } from '../storage';
 
 const MAX_HISTORY = 100;
 const EDITOR_SIZE = 10;
@@ -27,6 +28,10 @@ export default function SokobanGame() {
   const [customLevels, setCustomLevels] = useState<string[][]>([]);
   const historyRef = useRef<GameState[]>([]);
   const [historyLength, setHistoryLength] = useState(0);
+
+  // Scoring
+  const [bestMoves, setBestMoves] = useState<number | undefined>(undefined);
+  const [isNewRecord, setIsNewRecord] = useState(false);
 
   // -- EDIT MODE STATE --
   const [editorGrid, setEditorGrid] = useState<Grid>(createEmptyGrid(EDITOR_SIZE));
@@ -70,6 +75,11 @@ export default function SokobanGame() {
     historyRef.current = [];
     setHistoryLength(0);
     setShowWinModal(false);
+    setIsNewRecord(false);
+
+    // Load best moves for this level
+    const bests = getSokobanBests();
+    setBestMoves(bests[index]);
   }, [allLevels]);
 
   // Load level whenever index changes (and we are in play mode)
@@ -96,19 +106,26 @@ export default function SokobanGame() {
       else soundManager.playStep();
 
       const isWin = checkWin(result.grid);
+      const newMoves = gameState.moves + 1;
+
       if (isWin) {
         soundManager.playWin();
+        // Save Score
+        const isRecord = saveSokobanBest(currentLevelIndex, newMoves);
+        setIsNewRecord(isRecord);
+        if (isRecord) setBestMoves(newMoves);
+
         setShowWinModal(true);
       }
 
       setGameState({
         grid: result.grid,
         playerPos: result.playerPos,
-        moves: gameState.moves + 1,
+        moves: newMoves,
         levelCompleted: isWin,
       });
     }
-  }, [gameState, showWinModal, mode]);
+  }, [gameState, showWinModal, mode, currentLevelIndex]);
 
   const handleUndo = useCallback(() => {
     if (historyRef.current.length === 0 || !gameState || gameState.levelCompleted) return;
@@ -279,7 +296,8 @@ export default function SokobanGame() {
       colorClass="text-yellow-400"
       stats={[
         { label: 'Level', value: currentLevelIndex < LEVELS.length ? `${currentLevelIndex + 1}` : `C-${currentLevelIndex - LEVELS.length + 1}` },
-        { label: 'Moves', value: gameState.moves }
+        { label: 'Moves', value: gameState.moves },
+        { label: 'Best', value: bestMoves !== undefined ? bestMoves : '-' }
       ]}
       controls={[
         { keys: ['W','A','S','D'], action: 'Move / Push' },
@@ -352,6 +370,8 @@ export default function SokobanGame() {
       {showWinModal && mode === 'PLAY' && (
         <WinModal 
           moves={gameState?.moves || 0}
+          bestMoves={bestMoves}
+          isNewRecord={isNewRecord}
           onNext={() => currentLevelIndex < allLevels.length - 1 && setCurrentLevelIndex(c => c + 1)}
           onStay={() => setShowWinModal(false)}
           hasNextLevel={currentLevelIndex < allLevels.length - 1}
