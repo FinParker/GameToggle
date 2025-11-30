@@ -40,9 +40,10 @@ const Floor = () => null;
 
 interface GameBoardProps {
   grid: Grid;
+  onCellClick?: (x: number, y: number) => void;
 }
 
-export const GameBoard: React.FC<GameBoardProps> = ({ grid }) => {
+export const GameBoard: React.FC<GameBoardProps> = ({ grid, onCellClick }) => {
   if (!grid || grid.length === 0) return null;
 
   const rows = grid.length;
@@ -50,7 +51,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ grid }) => {
 
   return (
     <div 
-      className="bg-slate-800 p-1"
+      className="bg-slate-800 p-1 select-none"
       style={{
         display: 'grid',
         gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
@@ -60,22 +61,29 @@ export const GameBoard: React.FC<GameBoardProps> = ({ grid }) => {
     >
       {grid.flatMap((row, y) => 
         row.map((cell, x) => (
-          <Cell key={`${x}-${y}`} type={cell as CellType} />
+          <Cell 
+            key={`${x}-${y}`} 
+            type={cell as CellType} 
+            onClick={onCellClick ? () => onCellClick(x, y) : undefined}
+          />
         ))
       )}
     </div>
   );
 };
 
-const Cell = React.memo(({ type }: { type: CellType }) => {
+const Cell = React.memo(({ type, onClick }: { type: CellType, onClick?: () => void }) => {
   // Responsive cell sizing
-  const cellClass = "w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center bg-slate-900/50 rounded-[2px]";
+  const cellClass = `
+    w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center bg-slate-900/50 rounded-[2px]
+    ${onClick ? 'cursor-pointer hover:bg-slate-800 hover:ring-2 hover:ring-blue-400/50 z-0 hover:z-30' : ''}
+  `;
 
   let content = <Floor />;
 
   switch (type) {
     case CellType.Wall:
-      return <div className={cellClass}><Wall /></div>;
+      return <div className={cellClass} onClick={onClick}><Wall /></div>;
     case CellType.Box:
       content = <Box />;
       break;
@@ -90,7 +98,7 @@ const Cell = React.memo(({ type }: { type: CellType }) => {
       break;
     case CellType.PlayerOnTarget:
       return (
-        <div className={`${cellClass} relative`}>
+        <div className={`${cellClass} relative`} onClick={onClick}>
           <div className="absolute inset-0"><Target /></div>
           <div className="relative w-full h-full flex items-center justify-center"><Player /></div>
         </div>
@@ -99,5 +107,5 @@ const Cell = React.memo(({ type }: { type: CellType }) => {
       break;
   }
 
-  return <div className={cellClass}>{content}</div>;
+  return <div className={cellClass} onClick={onClick}>{content}</div>;
 });

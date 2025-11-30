@@ -30,6 +30,11 @@ export const parseLevel = (levelDesign: string[]): { grid: Grid; playerPos: Posi
   return { grid, playerPos };
 };
 
+// Convert Grid back to string[] for saving
+export const gridToStrings = (grid: Grid): string[] => {
+  return grid.map(row => row.join(''));
+};
+
 // Calculate new position based on direction
 const getOffset = (dir: Direction): { dx: number; dy: number } => {
   switch (dir) {
