@@ -115,19 +115,38 @@ export class SoundManager {
     this.playSynthGameOver();
   }
 
-  public playDrumHit() {
+  // --- Drum Kit Sounds ---
+
+  public playKick() {
     if (this.isMuted) return;
     this.resumeContext();
-    const audio = new Audio('/drum_hit.mp3');
-    audio.volume = 0.8;
-    audio.play().catch(() => this.playSynthDrum(150));
+    const audio = new Audio('/kick.mp3');
+    audio.volume = 0.9;
+    audio.play().catch(() => this.playSynthKick());
   }
 
-  public playDrumMiss() {
-    // Requirements state no sound for missed/off-beat hits
+  public playSnare() {
     if (this.isMuted) return;
     this.resumeContext();
-    // this.playSynthDrum(50); 
+    const audio = new Audio('/snare.mp3');
+    audio.volume = 0.8;
+    audio.play().catch(() => this.playSynthSnare());
+  }
+
+  public playHiHat() {
+    if (this.isMuted) return;
+    this.resumeContext();
+    const audio = new Audio('/hihat.mp3');
+    audio.volume = 0.6;
+    audio.play().catch(() => this.playSynthHiHat());
+  }
+
+  public playCrash() {
+    if (this.isMuted) return;
+    this.resumeContext();
+    const audio = new Audio('/crash.mp3');
+    audio.volume = 0.7;
+    audio.play().catch(() => this.playSynthCrash());
   }
 
   // --- Synthetic Fallbacks ---
@@ -253,22 +272,114 @@ export class SoundManager {
     osc.stop(this.ctx.currentTime + 0.5);
   }
 
-  private playSynthDrum(freq: number) {
+  // --- Drum Synths ---
+
+  private playSynthKick() {
     if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.connect(gain);
     gain.connect(this.ctx.destination);
 
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(freq / 2, this.ctx.currentTime + 0.1);
-    
-    gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
-    
+    osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
+    gain.gain.setValueAtTime(1, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
+
     osc.start();
-    osc.stop(this.ctx.currentTime + 0.1);
+    osc.stop(this.ctx.currentTime + 0.5);
+  }
+
+  private playSynthSnare() {
+    if (!this.ctx) return;
+    const noiseBuffer = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.2, this.ctx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < noiseBuffer.length; i++) {
+      output[i] = Math.random() * 2 - 1;
+    }
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = noiseBuffer;
+    
+    const noiseFilter = this.ctx.createBiquadFilter();
+    noiseFilter.type = 'highpass';
+    noiseFilter.frequency.value = 1000;
+    
+    const noiseGain = this.ctx.createGain();
+    noiseGain.gain.setValueAtTime(1, this.ctx.currentTime);
+    noiseGain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+    
+    noise.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(this.ctx.destination);
+    
+    const osc = this.ctx.createOscillator();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(250, this.ctx.currentTime);
+    
+    const oscGain = this.ctx.createGain();
+    oscGain.gain.setValueAtTime(0.5, this.ctx.currentTime);
+    oscGain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+
+    osc.connect(oscGain);
+    oscGain.connect(this.ctx.destination);
+
+    noise.start();
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.2);
+  }
+
+  private playSynthHiHat() {
+    if (!this.ctx) return;
+    const bufferSize = this.ctx.sampleRate * 0.05;
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buffer;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'highpass';
+    filter.frequency.value = 8000;
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.6, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.ctx.destination);
+    
+    noise.start();
+  }
+
+  private playSynthCrash() {
+    if (!this.ctx) return;
+    const bufferSize = this.ctx.sampleRate * 1.5;
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buffer;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 4000;
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.8, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 1.5);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.ctx.destination);
+    
+    noise.start();
   }
 }
 
