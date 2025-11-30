@@ -28,6 +28,12 @@ export default function RhythmGame() {
   const gameLoopRef = useRef<number | null>(null);
   const lastSpawnRef = useRef(0);
   const noteIdRef = useRef(0);
+  const comboRef = useRef(0);
+
+  // Sync combo ref for event listener to avoid stale closures without rebinding events
+  useEffect(() => {
+    comboRef.current = combo;
+  }, [combo]);
 
   // Audio start
   useEffect(() => {
@@ -109,13 +115,17 @@ export default function RhythmGame() {
           );
 
           if (targetNote) {
-            setScore(s => s + 100 + (combo * 10));
+            // Use ref to calculate score without depending on 'combo' state in useEffect
+            const currentCombo = comboRef.current;
+            setScore(s => s + 100 + (currentCombo * 10));
             setCombo(c => c + 1);
-            // Mark as hit (visually hide or animate)
+            
+            // Mark as hit
             return prev.map(n => n.id === targetNote.id ? { ...n, hit: true } : n);
           } else {
             // Miss input (pressed but no note)
             setCombo(0);
+            soundManager.playDrumMiss();
             return prev;
           }
         });
@@ -124,7 +134,7 @@ export default function RhythmGame() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isPlaying, combo]);
+  }, [isPlaying]); // Only rebind when play state changes, not on every combo update
 
   const sidebar = (
     <Sidebar
@@ -187,8 +197,6 @@ export default function RhythmGame() {
             </div>
           );
         })}
-
-        {/* Lane Press Effects (Visual only, could be added later) */}
       </div>
     </GameLayout>
   );
