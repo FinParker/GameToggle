@@ -1,0 +1,5 @@
+{
+  "name": "Copy of React Sokoban",
+  "description": "A classic puzzle game where you push boxes onto targets. Features multiple levels, undo functionality, and responsive controls.",
+  "requestFramePermissions": []
+}

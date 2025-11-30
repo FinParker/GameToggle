@@ -1,0 +1,45 @@
+import React from 'react';
+
+interface WinModalProps {
+  moves: number;
+  onNext: () => void;
+  onStay: () => void;
+  hasNextLevel: boolean;
+}
+
+export const WinModal: React.FC<WinModalProps> = ({ moves, onNext, onStay, hasNextLevel }) => {
+  return (
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px] transition-all animate-in fade-in duration-300">
+      <div className="bg-white p-8 rounded-2xl shadow-2xl text-center max-w-xs mx-4 border-4 border-slate-100">
+        <div className="mx-auto w-16 h-16 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mb-4 text-3xl select-none">
+          🏆
+        </div>
+        <h2 className="text-2xl font-bold text-slate-800 mb-2">Level Complete!</h2>
+        <p className="text-slate-500 mb-6">
+          Solved in <span className="font-bold text-slate-800">{moves}</span> moves.
+        </p>
+
+        <div className="flex flex-col gap-3">
+          {hasNextLevel ? (
+            <button
+              onClick={onNext}
+              className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 px-6 rounded-xl transition-transform active:scale-95 shadow-lg"
+            >
+              Next Level
+            </button>
+          ) : (
+            <div className="text-green-600 font-bold p-3 bg-green-50 rounded-lg border border-green-100">
+              All Levels Completed!
+            </div>
+          )}
+          <button
+            onClick={onStay}
+            className="text-slate-400 hover:text-slate-600 text-sm font-medium py-2"
+          >
+            Stay here
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
