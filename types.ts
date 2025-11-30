@@ -23,3 +23,5 @@ export interface GameState {
 }
 
 export type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
+
+export type GameType = 'sokoban' | 'snake' | 'rhythm';
